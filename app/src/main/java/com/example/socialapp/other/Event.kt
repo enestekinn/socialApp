@@ -1,20 +1,49 @@
 package com.example.socialapp.other
 
+import androidx.lifecycle.Observer
+
 class Event<T>(private val content : T) {
 
     var hasBeenHandled = false
-        private set // only be read from outside
+    private set
 
-    fun getContentIfNotHandled() : T? {
-        return if(!hasBeenHandled){
+    fun getContentIfNotHandled(): T? {
+        return if (!hasBeenHandled) {
             hasBeenHandled = true
             content
-        }
-        else{
+        }else {
             null
         }
     }
 
     fun peekContent() = content
-    
+}
+
+class EventObserver<T>(
+    private inline val  onError:((String) -> Unit)? = null,
+    private inline val onLoading:(() -> Unit)? = null,
+    private inline val onSuccess:((T) -> Unit)
+): Observer<Event<Resource<T>>>{
+    override fun onChanged(t: Event<Resource<T>>?) {
+        when(val  content = t?.peekContent()) {
+            is Resource.Success -> {
+                content.data?.let {
+                    onSuccess(it)
+                }
+            }
+            is Resource.Error -> {
+                t.getContentIfNotHandled()?.let {
+                    onError?.let { error ->
+                        error(it.message!!)
+                    }
+                }
+            }
+            is Resource.Loading -> {
+                onLoading?.let { loading ->
+                    loading()
+                }
+            }
+        }
+    }
+
 }
